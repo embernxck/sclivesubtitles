@@ -1,0 +1,12 @@
+# SITE_ADDRESS — имя сайта. Если это имя, а не «:80», Caddy сам получит
+# сертификат Let's Encrypt и будет его продлевать.
+{$SITE_ADDRESS} {
+	encode zstd gzip
+	reverse_proxy app:3000
+
+	header {
+		X-Content-Type-Options nosniff
+		Referrer-Policy strict-origin-when-cross-origin
+		-Server
+	}
+}

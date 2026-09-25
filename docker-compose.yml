@@ -1,0 +1,60 @@
+# Весь сервис: база, сайт и вход с https. Поднимается одной командой.
+
+services:
+  # Настоящая база-сервер (libsql), а не файл рядом с приложением.
+  # Наружу не смотрит: с ней разговаривает только сайт, по внутренней сети.
+  db:
+    image: ghcr.io/tursodatabase/libsql-server:latest
+    restart: unless-stopped
+    environment:
+      SQLD_NODE: primary
+    volumes:
+      - db-data:/var/lib/sqld
+    healthcheck:
+      # В образе базы нет ни wget, ни curl — только bash. Он умеет в сеть сам:
+      # открываем соединение и читаем первую строку ответа.
+      test:
+        - CMD
+        - bash
+        - -c
+        - >-
+          exec 3<>/dev/tcp/127.0.0.1/8080 &&
+          printf 'GET /health HTTP/1.0\r\n\r\n' >&3 &&
+          read -r line <&3 && [[ "$$line" == *200* ]]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+
+  app:
+    build: .
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: http://db:8080
+      SCLIVE_PUBLIC_URL: ${SCLIVE_PUBLIC_URL:-http://localhost}
+      SCLIVE_LRCLIB_PUBLISH: ${SCLIVE_LRCLIB_PUBLISH:-false}
+      SCLIVE_REPORT_THRESHOLD: ${SCLIVE_REPORT_THRESHOLD:-3}
+    depends_on:
+      db:
+        condition: service_healthy
+
+  # Вход снаружи. Сертификат получает и продлевает сам, руками ничего не нужно.
+  web:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      SITE_ADDRESS: ${SITE_ADDRESS:-:80}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      - app
+
+volumes:
+  db-data:
+  caddy-data:
+  caddy-config:
