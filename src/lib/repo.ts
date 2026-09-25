@@ -31,6 +31,8 @@ export type LyricsRow = {
   language: string | null;
   source: LyricsSource;
   authorName: string | null;
+  /** Свёртка ключа автора. Наружу не отдаётся — только сравнивается. */
+  authorKey: string;
   votes: number;
   reports: number;
   hidden: boolean;
@@ -91,6 +93,7 @@ function toLyrics(row: Row): LyricsRow {
     language: maybeText(row.language),
     source: text(row.source) === "lrclib" ? "lrclib" : "user",
     authorName: maybeText(row.author_name),
+    authorKey: text(row.author_key),
     votes: number(row.votes),
     reports: number(row.reports),
     hidden: number(row.hidden) === 1,

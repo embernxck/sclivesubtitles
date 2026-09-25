@@ -129,8 +129,19 @@ export function stripAuthorSuffix(title: string, author: string): string {
 
 export function extractTrackId(embedHtml: string | undefined): string | null {
   if (!embedHtml) return null;
-  const decoded = decodeURIComponent(embedHtml);
-  const match = /api\.soundcloud\.com(?:%2F|\/)tracks(?:%2F|\/)(\d+)/i.exec(decoded);
+
+  // В ответе попадается одиночный «%» (например, в описании трека), и тогда
+  // decodeURIComponent бросает URIError на всю строку. Ищем и в раскодированном,
+  // и в исходном виде — адрес там записан то так, то этак.
+  let decoded = embedHtml;
+  try {
+    decoded = decodeURIComponent(embedHtml);
+  } catch {
+    decoded = embedHtml;
+  }
+
+  const pattern = /api\.soundcloud\.com(?:%2F|\/)tracks(?:%2F|\/)(\d+)/i;
+  const match = pattern.exec(decoded) ?? pattern.exec(embedHtml);
   return match ? match[1] : null;
 }
 

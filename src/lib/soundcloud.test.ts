@@ -49,6 +49,20 @@ describe("ответ oEmbed", () => {
     expect(extractTrackId("<iframe src='нет номера'></iframe>")).toBeNull();
   });
 
+  it("переживает одиночный «%» в ответе", () => {
+    // Такой ответ валит decodeURIComponent целиком — а «%» там живой,
+    // из описания трека. Номер всё равно должен находиться.
+    const broken =
+      '<iframe src="https://w.soundcloud.com/player/?url=https%3A%2F%2Fapi.soundcloud.com%2Ftracks%2F293"></iframe> скидка 100% сегодня';
+    expect(extractTrackId(broken)).toBe("293");
+  });
+
+  it("находит номер и в нераскодированном адресе", () => {
+    expect(
+      extractTrackId('<iframe src="https://api.soundcloud.com/tracks/777"></iframe>'),
+    ).toBe("777");
+  });
+
   it("снимает «by Автор» с заголовка", () => {
     expect(stripAuthorSuffix("Flickermood by Forss", "Forss")).toBe("Flickermood");
     expect(stripAuthorSuffix("Название", "")).toBe("Название");
